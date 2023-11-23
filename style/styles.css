@@ -1,0 +1,31 @@
+:root{
+  font-family: monospace;
+  font-size: 24px;
+}
+
+.header-message{
+  text-align: center;
+  min-height: 1rem;
+  margin-top: 1rem;
+}
+
+.grid-wrapper,
+.button-wrapper{
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.grid-container{
+  display: grid;
+  grid-template: 4rem / 4rem 4rem 4rem;
+  grid-auto-rows: 4rem;
+}
+
+.cell {
+  border: 1px solid black;
+  font-size: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

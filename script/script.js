@@ -1,12 +1,14 @@
+const SIZE = 3;
 
 function GameSession(){
   const gameBoard = (function (){
-    var board = [];
-    const SIZE = 3;
-    resetBoard();
+    let board = [];
+    let remainingSquare;
+    init();
     
-    function resetBoard (){
+    function init(){
       board = [];
+      remainingSquare = SIZE * SIZE;
       for (let r = 0; r < SIZE; r++){
         const row = [];
         for (let c = 0; c < SIZE; c++){
@@ -16,21 +18,24 @@ function GameSession(){
       }
     }
     
+    //Convert array of cells to array of markers
     function displayBoard(){
       const output = board.map((row) => row.map((entry) => entry.getContent()));
       console.log(output);
+      return output;
     }
     
     //Row starts from top, column starts from left. (Top left is 0, 0). Return true if successful;
     function setBoard(row, col, value){
       if (row >= 0 && row < SIZE && col >= 0 && col < SIZE &&  board[row][col].getContent() === " "){
         board[row][col].setContent(value);
+        remainingSquare--;
         return true;
       }
       return false;
     }
     
-    //Returns true if marker exist SIZE times in a row, column or diagonal
+    //Returns true if marker exist SIZE times in a row, column or diagonal consecutively
     function foundWinner (marker){
       //Check winner in row or column
       for (let i = 0; i < SIZE; i++){
@@ -55,7 +60,14 @@ function GameSession(){
       return diaDownWin || diaUpWin;
     }
     
-    return {displayBoard, setBoard, foundWinner, resetBoard};
+    //Check if there are any "empty" spaces left on the board
+    function remainingSpace(){
+      if (remainingSquare > 0){
+        return true;
+      }
+    }
+    
+    return {displayBoard, setBoard, foundWinner, init, remainingSpace};
   })();
   
   const PLAYER_1_NAME = "Player 1";
@@ -63,52 +75,67 @@ function GameSession(){
   const PLAYER_1_MARKER = "O";
   const PLAYER_2_MARKER = "X";
   let firstPlayerTurn = true;
-  startGame();
+  let message = "";
+  let currBoard;
+  init();
   
-  function startGame(){
-    gameBoard.resetBoard();
-    console.log(`${PLAYER_1_NAME}'s turn.`);
-    gameBoard.displayBoard();
+  function init(){
+    gameBoard.init();
+    message = `${PLAYER_1_NAME}'s turn.`;
+    console.log(message);
+    firstPlayerTurn = true;
+    currBoard = gameBoard.displayBoard();
   }
   
   function playRound(row, col){
     if (gameBoard.foundWinner(PLAYER_1_MARKER) || gameBoard.foundWinner(PLAYER_2_MARKER)){
-      console.log("Please start a new game");
+      message = "Please reset game.";
+      console.log(message);
       return;
     }
     
     if (firstPlayerTurn){
-      const validMove = gameBoard.setBoard(row, col, PLAYER_1_MARKER);
-      if (validMove && gameBoard.foundWinner(PLAYER_1_MARKER)){
-        console.log(`${PLAYER_1_NAME} wins!`);
-        gameBoard.displayBoard();
-        return;
-      }
-      if (validMove){
-        console.log(`${PLAYER_2_NAME}'s turn.`);
-        gameBoard.displayBoard();
-        firstPlayerTurn = !firstPlayerTurn;
-        return;
-      }
+      doMove (row, col, PLAYER_1_MARKER, PLAYER_1_NAME, PLAYER_2_NAME);
+      return;
     }
     
     if (!firstPlayerTurn){
-      const validMove = gameBoard.setBoard(row, col, PLAYER_2_MARKER);
-      if (validMove && gameBoard.foundWinner(PLAYER_2_MARKER)){
-        gameBoard.displayBoard();
-        console.log(`${PLAYER_2_NAME} wins!`);
-        return;
-      }
-      if (validMove){
-        console.log(`${PLAYER_1_NAME}'s turn.`);
-        gameBoard.displayBoard();
-        firstPlayerTurn = !firstPlayerTurn;
-        return;
-      }
+      doMove (row, col, PLAYER_2_MARKER, PLAYER_2_NAME, PLAYER_1_NAME);
+      return;      
     }
   }
+  
+  function doMove(row, col, marker, playerName, nextPlayerName){
+    const validMove = gameBoard.setBoard(row, col, marker);
+    if (validMove && gameBoard.foundWinner(marker)){
+      message = `${playerName} wins!`;
+      console.log(message);
+      currBoard = gameBoard.displayBoard();
+      return;
+    }
+    
+    if (validMove){
+      message = `${nextPlayerName}'s turn.`;
+      console.log(message);
+      currBoard = gameBoard.displayBoard();
+      firstPlayerTurn = !firstPlayerTurn;
+    }
+    
+    if (!gameBoard.remainingSpace()){
+      message = "Draw! Please reset game.";
+      console.log(message);
+    }
+  }
+  
+  function getCurrBoard (){
+    return currBoard;
+  }
+  
+  function getMessage (){
+    return message;
+  }
 
-  return {startGame, playRound}; 
+  return {init, playRound, getMessage, getCurrBoard}; 
 }
 
 
@@ -121,6 +148,53 @@ function Cell(){
   return {setContent, getContent};
 }
 
+function ScreenController(){
+  let session;
+  
+  const resetButton = document.querySelector(".reset-button");
+  resetButton.addEventListener("click", () => {
+    session.init();
+    displayMessage();
+    displayBoard();
+  });
+  
+  const playRound = (e) => {
+    session.playRound(e.target.dataset.row, e.target.dataset.col);
+    displayMessage();
+    displayBoard();
+  };
+  init();
+  
+  
+  function init(){
+    session = GameSession();
+    displayMessage();
+    displayBoard();
+  }
+  
+  function displayBoard(){
+    const gridContainer = document.querySelector(".grid-container");
+    gridContainer.textContent = "";
+    
+    for (let row = 0; row < SIZE; row++){
+      for (let col = 0; col < SIZE; col++){
+        const buttonCell = document.createElement("button");
+        buttonCell.type = "button";
+        buttonCell.classList.add("cell");
+        buttonCell.dataset.row = row;
+        buttonCell.dataset.col = col;
+        gridContainer.appendChild(buttonCell);
+        buttonCell.textContent = session.getCurrBoard()[row][col];
+        buttonCell.addEventListener("click", playRound);
+      }
+    }
+  }
+  
+  function displayMessage(){
+    const messageBox = document.querySelector(".header-message");
+    messageBox.textContent = session.getMessage();
+  }
 
+}
 
-const g = GameSession();
+ScreenController();
